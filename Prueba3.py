@@ -6,22 +6,39 @@ import random as ra
 from scipy.spatial.distance import pdist
 from scipy.spatial import ConvexHull
 
-plt.ion()  #modo interactivo del plt
 np.set_printoptions(edgeitems=10, threshold=100, linewidth=150)
 # Configurar el generador de numeros aleatorios
 rng = np.random.default_rng()
 
 '''
 Dudas:
--La mutacion es necesaria? ya que el cruce al ser random rompe el quorum, y se tiene una 
+-La mutacion? ya que el cruce al ser random rompe el quorum, y se tiene una 
 funcion validar que ajusta los votos hasta que se cumpla el quorum.
 ()->
+-probabilidad de mutar por elemento del cromosoma o por cromosoma?
 -ejecutar hasta que el fitness no mejore por x generaciones?
 -guardar todas las generaciones para encontrar el minimo local?
--la probabilidad del mejor es seteada por el usuario o se calcula del fitness?
+-la probabilidad de seleccionar al mejor es seteada por el usuario o se calcula a partir del fitness?
 -los padres se seleccionan mediante la probabilidad acumlada, el mejor pasa directamente?
 -los padres deben ser diferentes'''
 
+#mutacion 1 si es 0 y 0 si es 1, solo 1 dato
+#el Z no deberia subir solo bajar
+#tupla <it, z> -> iteracion, distancia, solo imrimir si hay cmabios
+#numpy.random.generator.choice -> para elegir el padre con reemplazo
+#^ pasar el arreglo del seleccion p que suma casi 1 luego lo normaliza la funcion
+#mostrar el grafico al final
+#notas:
+# -tratar de usar numpy para calculos mas rapido
+# -
+
+#cambiar:
+# el erro debe estar en la posicion de validar luego de la mutacion
+# mutacion debe cambiarse
+# eleccion de padres se debe usar np.random.choice()-> pasar el arreglo de probabilidades
+# 
+#
+#-
 
 def getDatos(path):
   '''obtener los datos del json'''
@@ -127,20 +144,24 @@ def distanciaTotal(cromosoma, puntos):
 def ordenarPoblacion(poblacion, puntos):
   '''Se selecciona al mejor individuo de acuerdo a la probabilidad del fitness '''
 
-  ########## 2.-Evaluar cada cromosoma de acuerdo a Z(fitness) ##########
-  fitness_values = [calcularFitness(cromosoma, puntos) for cromosoma in poblacion]
-  fitness_array = np.array(fitness_values)
+  # 2.-Evaluar cada cromosoma de acuerdo a Z(fitness) 
+  fitness_values = np.array([calcularFitness(cromosoma, puntos) for cromosoma in poblacion])
+  distancias_totales = np.array([distanciaTotal(cromosoma, puntos) for cromosoma in poblacion])
 
-  ########## 3.-Ordenar la poblacion de manera decendente de acuerdo al fitness ##########
-  sorted_indices = np.argsort(fitness_array)[::-1]
-  # poblacion ordenada
-  poblacion_ordenada =  poblacion[sorted_indices] 
+  # 3.-Ordenar la poblacion de manera decendente de acuerdo al fitness
+  sorted_indices = np.argsort(fitness_values)[::-1]
+  
+  # poblacion y valores ordenados
+  poblacion_ordenada = poblacion[sorted_indices]
+  fitness_ordenado = fitness_values[sorted_indices]
+  distancias_ordenadas = distancias_totales[sorted_indices]
 
-  print(f'Mejor fitness: {fitness_values[0]}')
-  distancias_totales = [distanciaTotal(cromosoma, puntos) for cromosoma in poblacion]
-  print(f"Mejor distancia: {distancias_totales[0]}")
+  # imprimir el mejor real
+  print(f'Mejor fitness: {fitness_ordenado[0]}')
+  print(f'Mejor distancia: {distancias_ordenadas[0]}')
 
   return poblacion_ordenada
+
 
 
 def prob_posicion(poblacion, prob):
@@ -181,30 +202,25 @@ def generarPoblacion(pobl_actual, p_sel, quorum_min, p_mut):
   nueva_poblacion = []
   #crear nueva poblacion con tamano n_crom - 1 (para agregar el mejor al final)
   while len(nueva_poblacion) < n_crom-1:
-    #devuelve los indices de padre1 y padre2
-    # Seleccionar padres usando choice() con probabilidades individuales
+    # seleccionar padres usando choice() con probabilidades individuales
     i_padre1, i_padre2 = rng.choice(n_crom, size=2, replace=True, p=probabilidades)
 
-
-    #TODO: mejorar logica?
-    if i_padre1 != i_padre2: #si son diferentes procede a crear los hijos
-
-      p_corte = ra.randrange(n_votos) #random para el par de cromosomas
+    p_corte = ra.randrange(n_votos) #random para el par de cromosomas
       
-      #Cruzar los padres y obtener los hijos
-      hijo1, hijo2 = crossover(pobl_actual[i_padre1], pobl_actual[i_padre2], p_corte)
+    #Cruzar los padres y obtener los hijos
+    hijo1, hijo2 = crossover(pobl_actual[i_padre1], pobl_actual[i_padre2], p_corte)
 
-      #mutar hijos
-      hijo1_mutado = mutacion(hijo1, p_mut)
-      hijo2_mutado = mutacion(hijo2, p_mut)
+    #validar hijos (ajustar hasta que cumplan el quorum minimo)
+    hijo1_validado = validar(hijo1, quorum_min)
+    hijo2_validado = validar(hijo2, quorum_min)
 
-      #validar hijos
-      hijo1_validado = validar(hijo1_mutado, quorum_min)
-      hijo2_validado = validar(hijo2_mutado, quorum_min)
+    #mutar hijos
+    hijo1_mutado = mutacion(hijo1_validado, p_mut)
+    hijo2_mutado = mutacion(hijo2_validado, p_mut)
 
-      #agregar los hijos a la nueva poblacion
-      nueva_poblacion.append(hijo1_validado) 
-      nueva_poblacion.append(hijo2_validado)
+    #agregar los hijos a la nueva poblacion
+    nueva_poblacion.append(hijo1_mutado) 
+    nueva_poblacion.append(hijo2_mutado)
 
   #agregar el mejor de la generacion anterior
   mejor = pobl_actual[0]
@@ -223,16 +239,22 @@ def crossover(padre1, padre2, p_corte):
   return hijo1, hijo2
 
 
-def mutacion(cromosoma, p_mut):
+def mutacion(crom_original, p_mut):
   '''cambiar un dato aleatorio de un cromosoma mediante la probabilidad p_mut'''
-  n_votos = len(cromosoma)
-  
-  if ra.random() < p_mut:  # Decide si mutar segun la probabilidad
-    posicion = ra.randint(0, n_votos-1)  # posicion aleatoria 0 a n_votos
-    cromosoma[posicion] ^= 1  # XOR cambia el bit
-  
-  return cromosoma
+  crom_mutado = crom_original.copy()
+  random = ra.random()
 
+  if random < p_mut:
+    # encontrar posiciones de los 1 y 0
+    ones_pos = np.where(crom_mutado == 1)[0]
+    zeros_pos = np.where(crom_mutado == 0)[0]
+    # seleccionar un 1 y un 0 random
+    swap_one = np.random.choice(ones_pos)
+    swap_zero = np.random.choice(zeros_pos)
+    # intercambiar los valores
+    crom_mutado[swap_one], crom_mutado[swap_zero] = crom_mutado[swap_zero], crom_mutado[swap_one]
+  #devolver el array resultante
+  return crom_mutado
 
 def validar(cromosoma, quorum_minimo):
   '''
@@ -242,17 +264,17 @@ def validar(cromosoma, quorum_minimo):
   '''
   suma = np.sum(cromosoma)
   if suma > quorum_minimo:
-    # Posiciones de todos los 1s
+    # posiciones de todos los 1s
     posiciones = np.where(cromosoma == 1)[0]
     k = suma - quorum_minimo
   elif suma < quorum_minimo:
-    # Posiciones de todos los 0s
+    # posiciones de todos los 0s
     posiciones = np.where(cromosoma == 0)[0]
     k = quorum_minimo - suma
   else:
     return cromosoma
   
-  # Cambiar k bits aleatorios
+  # cambiar k bits aleatorios
   if k > 0:
     cambios = np.random.permutation(posiciones)[:k]
     cromosoma[cambios] ^= 1
@@ -264,9 +286,9 @@ def validar(cromosoma, quorum_minimo):
 
 ids, puntos, n_votes = getDatos('./votes.json')    #id y posiciones
 quorum_min = math.floor(n_votes/2)+1      #quorum minimo
-n_pobl = 11     # poblacion inicial
-p_sel = 0.6     # prob seleccion del mejor finess
-p_mut = 0.4    # probailidad de mutacion
+n_pobl = 38    # poblacion inicial
+p_sel = 0.141     # prob seleccion del mejor finess
+p_mut = 0.1700019    # probailidad de mutacion
 cont_gen = 1  # contador de generaciones
 pobl_all = [] # guardar todas las poblaciones?
 
