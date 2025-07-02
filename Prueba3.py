@@ -115,6 +115,11 @@ def calcularFitness(cromosoma, puntos):
   
   return fitness
 
+def distanciaTotal(cromosoma, puntos):
+  pts_selec = puntos[cromosoma == 1]
+  #suma de distancia total
+  distancia_total = np.sum(pdist(pts_selec, 'euclidean'))
+  return distancia_total
 
 
 def ordenarPoblacion(poblacion, puntos):
