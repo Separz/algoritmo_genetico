@@ -8,6 +8,8 @@ from scipy.spatial import ConvexHull
 
 plt.ion()  #modo interactivo del plt
 np.set_printoptions(edgeitems=10, threshold=100, linewidth=150)
+# Configurar el generador de numeros aleatorios
+rng = np.random.default_rng()
 
 '''
 Dudas:
@@ -240,20 +242,20 @@ def validar(cromosoma, quorum_minimo):
   '''
   suma = np.sum(cromosoma)
   if suma > quorum_minimo:
-      # Posiciones de todos los 1s
-      posiciones = np.where(cromosoma == 1)[0]
-      k = suma - quorum_minimo
+    # Posiciones de todos los 1s
+    posiciones = np.where(cromosoma == 1)[0]
+    k = suma - quorum_minimo
   elif suma < quorum_minimo:
-      # Posiciones de todos los 0s
-      posiciones = np.where(cromosoma == 0)[0]
-      k = quorum_minimo - suma
+    # Posiciones de todos los 0s
+    posiciones = np.where(cromosoma == 0)[0]
+    k = quorum_minimo - suma
   else:
-      return cromosoma
+    return cromosoma
   
   # Cambiar k bits aleatorios
   if k > 0:
-      cambios = np.random.permutation(posiciones)[:k]
-      cromosoma[cambios] ^= 1
+    cambios = np.random.permutation(posiciones)[:k]
+    cromosoma[cambios] ^= 1
 
   return cromosoma
 
@@ -280,7 +282,7 @@ mejor_cromosoma = pobl_actual_ord[0]
 graf_polig_convexo(mejor_cromosoma, puntos, ax)
     
 
-# hasta cuando? no cacho :( hasta que el fitness no mejore durante x generaciones? 
+# definir un numero fijo de generaciones 
 while True:
     print(f'Generacion Actual: {cont_gen}')
     cont_gen += 1
