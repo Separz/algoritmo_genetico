@@ -141,7 +141,7 @@ def prob_posicion(poblacion, prob):
   en el indice retorna el arreglo de probabilidades acumuladas'''
   sum = 0
   probabilidades = []
-  probab_acumulada = 0
+  probabilidad = 0
 
   n_crom, n_votes = poblacion.shape
 
@@ -152,22 +152,13 @@ def prob_posicion(poblacion, prob):
   #calcula la probabilidad por posicion
   for i in range(1, n_crom+1):
     # calcular cuantil de acuerdo a la probabilidad de seleccion del mejor
-    probab_acumulada += prob*(1-prob)**(i-1)/sum
-    probabilidades.append(probab_acumulada) # guardar las probabilidades
+    probabilidad = prob*(1-prob)**(i-1)/sum
+    probabilidades.append(probabilidad) # guardar
 
   return probabilidades
 
 
-
-def cuantile(prob_acumulada):
-  '''selecciona un cromosma ganador de acuerdo a la probabilidad acumulada de cada uno'''
-  p_random = ra.uniform(0, 1) #aleatorio decimal entre 0 y 1
-  for index, p_cuantil in enumerate(prob_acumulada):
-    if p_random <= p_cuantil: # si es mayor o igual a la probabilidad acumulada 
-      return index #Retornar indice del cromosoma
-
-
-def generarPoblacion(pobl_actual, p_seleccion, quorum_min, p_mut):
+def generarPoblacion(pobl_actual, p_sel, quorum_min, p_mut):
   '''Parametros: 
     - poblacion actual
     - prob de seleccionar padres
@@ -177,15 +168,16 @@ def generarPoblacion(pobl_actual, p_seleccion, quorum_min, p_mut):
   Muta y valida los hijos obtenidos y devuelve la nueva poblacion'''
 
   n_crom, n_votos = pobl_actual.shape
-  prob_acumuladas = prob_posicion(pobl_actual, p_seleccion)
+  probabilidades = prob_posicion(pobl_actual, p_sel)
 
   #seleccionar 2 padres de manera aleatoria de acuerdo la probabilidad por cuantil
   nueva_poblacion = []
   #crear nueva poblacion con tamano n_crom - 1 (para agregar el mejor al final)
   while len(nueva_poblacion) < n_crom-1:
     #devuelve los indices de padre1 y padre2
-    i_padre1 = cuantile(prob_acumuladas)
-    i_padre2 = cuantile(prob_acumuladas) 
+    # Seleccionar padres usando choice() con probabilidades individuales
+    i_padre1, i_padre2 = rng.choice(n_crom, size=2, replace=True, p=probabilidades)
+
 
     #TODO: mejorar logica?
     if i_padre1 != i_padre2: #si son diferentes procede a crear los hijos
