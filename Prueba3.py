@@ -94,7 +94,7 @@ def generarPoblacionInicial(n_pob, n_votes, quorum):
 
 
 #utiliza scipy pdist y normaliza el resultado de 0 a 1
-def calcularFitness(cromosoma, puntos, poblacion):
+def calcularFitness(cromosoma, puntos):
   """
   fitness normalizado 0 a 1 para puntos en el plano
   1 Minima distancia; 0 Maxima distancia posible.
@@ -105,8 +105,6 @@ def calcularFitness(cromosoma, puntos, poblacion):
     
   #suma de distancia total
   distancia_total = np.sum(pdist(pts_selec, 'euclidean'))
-
-  #print(f'distancia total:{distancia_total}')
     
   #distancia maxima en el plano -1,-1 a 1,1
   d_max = np.sqrt((1-(-1))**2+((1-(-1))**2)) #sqrt(8)
@@ -123,7 +121,7 @@ def ordenarPoblacion(poblacion, puntos):
   '''Se selecciona al mejor individuo de acuerdo a la probabilidad del fitness '''
 
   ########## 2.-Evaluar cada cromosoma de acuerdo a Z(fitness) ##########
-  fitness_values = [calcularFitness(cromosoma, puntos, poblacion) for cromosoma in poblacion]
+  fitness_values = [calcularFitness(cromosoma, puntos) for cromosoma in poblacion]
   fitness_array = np.array(fitness_values)
 
   ########## 3.-Ordenar la poblacion de manera decendente de acuerdo al fitness ##########
@@ -132,6 +130,8 @@ def ordenarPoblacion(poblacion, puntos):
   poblacion_ordenada =  poblacion[sorted_indices] 
 
   print(f'Mejor fitness: {fitness_values[0]}')
+  distancias_totales = [distanciaTotal(cromosoma, puntos) for cromosoma in poblacion]
+  print(f"Mejor distancia: {distancias_totales[0]}")
 
   return poblacion_ordenada
 
