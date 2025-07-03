@@ -40,7 +40,6 @@ def generarCromosoma(total, quorum):
 
 def graf_polig_convexo(cromosoma, pts, ax):
   '''crea el grafico interactivo para mostrar los puntos en cada generacion'''
-  
   # filtrar puntos
   pts_select = pts[cromosoma == 1]
   
@@ -105,9 +104,8 @@ def distanciaTotal(cromosoma, puntos):
   return distancia_total
 
 
-# Variables globales para guardar el mejor resultado anterior
-#mejor_fitness_anterior = float('-inf')  # Porque el fitness se quiere maximizar
-mejor_distancia_anterior = float('inf')  # Porque la distancia se quiere minimizar
+# variables globales para guardar el mejor resultado anterior
+mejor_distancia_anterior = float('inf') 
 
 def ordenarPoblacion(poblacion, puntos):
   '''Se selecciona al mejor individuo de acuerdo a la probabilidad del fitness'''
@@ -118,12 +116,11 @@ def ordenarPoblacion(poblacion, puntos):
   fitness_values = np.array([calcularFitness(cromosoma, puntos) for cromosoma in poblacion])
   mejor_distancia_actual = distanciaTotal(poblacion[0], puntos)
 
-  # Ordenar de mayor a menor fitness
+  # ordenar de mayor a menor fitness
   sorted_indices = np.argsort(fitness_values)[::-1]
   poblacion_ordenada = poblacion[sorted_indices]
 
-  # Verificar si hay mejora
-  #TODO: arreglar esto a una tupla con generacion_actual, valor_z   
+  # verificar si hay mejora
   if mejor_distancia_actual < mejor_distancia_anterior:
     print(f'Generacion Actual:{cont_gen}')
     print(f'Mejor distancia actual: {mejor_distancia_actual}\n')
@@ -244,8 +241,7 @@ def validar(cromosoma, quorum_minimo):
 
 
 #########---INICIO---#########
-
-puntos, n_votes = getDatos('./votes.json')    #id y posiciones
+puntos, n_votes = getDatos('./votes.json')    #posiciones y numero de votos
 quorum_min = math.floor(n_votes/2)+1      #quorum minimo
 n_pobl = 38    # poblacion inicial
 p_sel = 0.141     # prob seleccion del mejor fitness
@@ -276,6 +272,5 @@ while cont_gen <= 100:
   # Se reemplaza la poblacion anterior por la nueva
   pobl_actual_ord = pobl_new_ord
 
-
-fig, ax = plt.subplots()  # crear figura del plt
+fig, ax = plt.subplots(figsize=(12, 8))  # crear figura del plt
 graf_polig_convexo(mejor_cromosoma, puntos, ax)
