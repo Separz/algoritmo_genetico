@@ -101,8 +101,7 @@ def graf_polig_convexo(cromosoma, pts, ax):
     ax.grid(True)
     ax.axis([-1, 1, -1, 1])
     ax.legend()
-    plt.draw()  # actualizar el grafico
-    plt.pause(0.1)  # tiempo de pausa para actualizar
+    plt.show()
 
 
 def generarPoblacionInicial(n_pob, n_votes, quorum):
@@ -141,27 +140,36 @@ def distanciaTotal(cromosoma, puntos):
   return distancia_total
 
 
+# Variables globales para guardar el mejor resultado anterior
+mejor_fitness_anterior = float('-inf')  # Porque el fitness se quiere maximizar
+mejor_distancia_anterior = float('inf')  # Porque la distancia se quiere minimizar
+
 def ordenarPoblacion(poblacion, puntos):
-  '''Se selecciona al mejor individuo de acuerdo a la probabilidad del fitness '''
+    '''Se selecciona al mejor individuo de acuerdo a la probabilidad del fitness '''
 
-  # 2.-Evaluar cada cromosoma de acuerdo a Z(fitness) 
-  fitness_values = np.array([calcularFitness(cromosoma, puntos) for cromosoma in poblacion])
-  distancias_totales = np.array([distanciaTotal(cromosoma, puntos) for cromosoma in poblacion])
+    global mejor_fitness_anterior, mejor_distancia_anterior
 
-  # 3.-Ordenar la poblacion de manera decendente de acuerdo al fitness
-  sorted_indices = np.argsort(fitness_values)[::-1]
-  
-  # poblacion y valores ordenados
-  poblacion_ordenada = poblacion[sorted_indices]
-  fitness_ordenado = fitness_values[sorted_indices]
-  distancias_ordenadas = distancias_totales[sorted_indices]
+    # Evaluar cada cromosoma
+    fitness_values = np.array([calcularFitness(cromosoma, puntos) for cromosoma in poblacion])
+    distancias_totales = np.array([distanciaTotal(cromosoma, puntos) for cromosoma in poblacion])
 
-  # imprimir el mejor real
-  print(f'Mejor fitness: {fitness_ordenado[0]}')
-  print(f'Mejor distancia: {distancias_ordenadas[0]}')
+    # Ordenar de mayor a menor fitness
+    sorted_indices = np.argsort(fitness_values)[::-1]
+    poblacion_ordenada = poblacion[sorted_indices]
+    fitness_ordenado = fitness_values[sorted_indices]
+    distancias_ordenadas = distancias_totales[sorted_indices]
 
-  return poblacion_ordenada
+    # Verificar si hay mejora
+    mejor_fitness_actual = fitness_ordenado[0]
+    mejor_distancia_actual = distancias_ordenadas[0]
 
+    if mejor_fitness_actual > mejor_fitness_anterior or mejor_distancia_actual < mejor_distancia_anterior:
+        print(f'Mejor fitness: {mejor_fitness_actual}')
+        print(f'Mejor distancia: {mejor_distancia_actual}')
+        mejor_fitness_anterior = mejor_fitness_actual
+        mejor_distancia_anterior = mejor_distancia_actual
+
+    return poblacion_ordenada
 
 
 def prob_posicion(poblacion, prob):
@@ -294,6 +302,7 @@ pobl_all = [] # guardar todas las poblaciones?
 
 fig, ax = plt.subplots()  # crear figura del plt
 
+
 # generar la poblacion inicial 
 poblacion_inicial = generarPoblacionInicial(n_pobl, n_votes, quorum_min) # generar la poblacion inicial
 # ordenar la poblacion de acuerdo al fitness
@@ -301,12 +310,10 @@ pobl_actual_ord = ordenarPoblacion(poblacion_inicial, puntos)
 
 #graficar el mejor cromosoma de la poblacion inicial
 mejor_cromosoma = pobl_actual_ord[0]
-graf_polig_convexo(mejor_cromosoma, puntos, ax)
-    
+
 
 # definir un numero fijo de generaciones 
-while True:
-    print(f'Generacion Actual: {cont_gen}')
+while cont_gen <= 9000:
     cont_gen += 1
     #generar la nueva poblacion (cruzar, mutar, validar)
     pobl_new = generarPoblacion(pobl_actual_ord, p_sel, quorum_min, p_mut)
@@ -315,7 +322,9 @@ while True:
     
     # Guardar y graficar el mejor cromosoma de la nueva generacion
     mejor_cromosoma = pobl_new_ord[0]
-    graf_polig_convexo(mejor_cromosoma, puntos, ax)
-    
+  
     # Se reemplaza la poblacion anterior por la nueva
     pobl_actual_ord = pobl_new_ord
+
+
+graf_polig_convexo(mejor_cromosoma, puntos, ax)
