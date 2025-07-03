@@ -10,36 +10,6 @@ np.set_printoptions(edgeitems=10, threshold=100, linewidth=150)
 # Configurar el generador de numeros aleatorios
 rng = np.random.default_rng()
 
-'''
-Dudas:
--La mutacion? ya que el cruce al ser random rompe el quorum, y se tiene una 
-funcion validar que ajusta los votos hasta que se cumpla el quorum.
-()->
--probabilidad de mutar por elemento del cromosoma o por cromosoma?
--ejecutar hasta que el fitness no mejore por x generaciones?
--guardar todas las generaciones para encontrar el minimo local?
--la probabilidad de seleccionar al mejor es seteada por el usuario o se calcula a partir del fitness?
--los padres se seleccionan mediante la probabilidad acumlada, el mejor pasa directamente?
--los padres deben ser diferentes'''
-
-#mutacion 1 si es 0 y 0 si es 1, solo 1 dato
-#el Z no deberia subir solo bajar
-#tupla <it, z> -> iteracion, distancia, solo imrimir si hay cmabios
-#numpy.random.generator.choice -> para elegir el padre con reemplazo
-#^ pasar el arreglo del seleccion p que suma casi 1 luego lo normaliza la funcion
-#mostrar el grafico al final
-#notas:
-# -tratar de usar numpy para calculos mas rapido
-# -
-
-#cambiar:
-# el erro debe estar en la posicion de validar luego de la mutacion
-# mutacion debe cambiarse
-# eleccion de padres se debe usar np.random.choice()-> pasar el arreglo de probabilidades
-# 
-#
-#-
-
 def getDatos(path):
   '''obtener los datos del json'''
   # cargar el archivo JSON
@@ -145,7 +115,7 @@ mejor_fitness_anterior = float('-inf')  # Porque el fitness se quiere maximizar
 mejor_distancia_anterior = float('inf')  # Porque la distancia se quiere minimizar
 
 def ordenarPoblacion(poblacion, puntos):
-    '''Se selecciona al mejor individuo de acuerdo a la probabilidad del fitness '''
+    '''Se selecciona al mejor individuo de acuerdo a la probabilidad del fitness'''
 
     global mejor_fitness_anterior, mejor_distancia_anterior
 
@@ -195,13 +165,8 @@ def prob_posicion(poblacion, prob):
 
 
 def generarPoblacion(pobl_actual, p_sel, quorum_min, p_mut):
-  '''Parametros: 
-    - poblacion actual
-    - prob de seleccionar padres
-    - coalicion minima
-    - prob de mutacion
-  Obtiene dos padres aleatorios de acuerdo a la distribucion de probabilidad acumulada
-  Muta y valida los hijos obtenidos y devuelve la nueva poblacion'''
+  ''' Obtiene dos padres aleatorios de acuerdo a la distribucion de probabilidad 
+  acumulada, muta y valida los hijos obtenidos y devuelve la nueva poblacion'''
 
   n_crom, n_votos = pobl_actual.shape
   probabilidades = prob_posicion(pobl_actual, p_sel)
@@ -248,7 +213,7 @@ def crossover(padre1, padre2, p_corte):
 
 
 def mutacion(crom_original, p_mut):
-  '''cambiar un dato aleatorio de un cromosoma mediante la probabilidad p_mut'''
+  '''Cambiar un dato aleatorio de un cromosoma mediante la probabilidad p_mut'''
   crom_mutado = crom_original.copy()
   random = ra.random()
 
