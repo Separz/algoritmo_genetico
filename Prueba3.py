@@ -150,6 +150,34 @@ def prob_posicion(poblacion, prob):
   return probabilidades
 
 
+def crossover(padre1, padre2, p_corte):
+  '''Cruzar dos pares de cromosomas dado un punto de corte
+  Devuelve dos cromosomas hijos'''
+
+  hijo1 = np.concatenate((padre1[:p_corte], padre2[p_corte:]))
+  hijo2 = np.concatenate((padre2[:p_corte], padre1[p_corte:]))
+
+  return hijo1, hijo2
+
+
+def mutacion(crom_original, p_mut):
+  '''Cambiar un dato aleatorio de un cromosoma mediante la probabilidad p_mut'''
+  crom_mutado = crom_original.copy()
+  random = ra.random()
+
+  if random < p_mut:
+    # encontrar posiciones de los 1 y 0
+    ones_pos = np.where(crom_mutado == 1)[0]
+    zeros_pos = np.where(crom_mutado == 0)[0]
+    # seleccionar un 1 y un 0 random
+    swap_one = np.random.choice(ones_pos)
+    swap_zero = np.random.choice(zeros_pos)
+    # intercambiar los valores
+    crom_mutado[swap_one], crom_mutado[swap_zero] = crom_mutado[swap_zero], crom_mutado[swap_one]
+  #devolver el array resultante
+  return crom_mutado
+
+
 def generarPoblacion(pobl_actual, p_sel, quorum_min, p_mut):
   ''' Obtiene dos padres aleatorios de acuerdo a la distribucion de probabilidad 
   acumulada, muta y valida los hijos obtenidos y devuelve la nueva poblacion'''
@@ -187,33 +215,6 @@ def generarPoblacion(pobl_actual, p_sel, quorum_min, p_mut):
   return np.array(nueva_poblacion) #retornar la nueva poblacion
 
 
-def crossover(padre1, padre2, p_corte):
-  '''Cruzar dos pares de cromosomas dado un punto de corte
-  Devuelve dos cromosomas hijos'''
-
-  hijo1 = np.concatenate((padre1[:p_corte], padre2[p_corte:]))
-  hijo2 = np.concatenate((padre2[:p_corte], padre1[p_corte:]))
-
-  return hijo1, hijo2
-
-
-def mutacion(crom_original, p_mut):
-  '''Cambiar un dato aleatorio de un cromosoma mediante la probabilidad p_mut'''
-  crom_mutado = crom_original.copy()
-  random = ra.random()
-
-  if random < p_mut:
-    # encontrar posiciones de los 1 y 0
-    ones_pos = np.where(crom_mutado == 1)[0]
-    zeros_pos = np.where(crom_mutado == 0)[0]
-    # seleccionar un 1 y un 0 random
-    swap_one = np.random.choice(ones_pos)
-    swap_zero = np.random.choice(zeros_pos)
-    # intercambiar los valores
-    crom_mutado[swap_one], crom_mutado[swap_zero] = crom_mutado[swap_zero], crom_mutado[swap_one]
-  #devolver el array resultante
-  return crom_mutado
-
 def validar(cromosoma, quorum_minimo):
   '''
   Validar que los datos cumplan con el quorum minimo.
@@ -243,7 +244,7 @@ def validar(cromosoma, quorum_minimo):
 #########---INICIO---#########
 puntos, n_votes = getDatos('./votes.json')    #posiciones y numero de votos
 quorum_min = math.floor(n_votes/2)+1      #quorum minimo
-n_pobl = 38    # poblacion inicial
+n_pobl = 37    # poblacion inicial
 p_sel = 0.141     # prob seleccion del mejor fitness
 p_mut = 0.1700019    # probailidad de mutacion
 cont_gen = 1      # contador de generaciones
