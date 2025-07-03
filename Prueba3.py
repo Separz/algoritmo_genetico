@@ -123,7 +123,7 @@ def ordenarPoblacion(poblacion, puntos):
   # verificar si hay mejora
   if mejor_distancia_actual < mejor_distancia_anterior:
     print(f'Generacion Actual:{cont_gen}')
-    print(f'Mejor distancia actual: {mejor_distancia_actual}\n')
+    print(f'Z = Mejor distancia total actual: {mejor_distancia_actual}\n')
     mejor_distancia_anterior = mejor_distancia_actual
   return poblacion_ordenada
 
@@ -246,8 +246,7 @@ quorum_min = math.floor(n_votes/2)+1      #quorum minimo
 n_pobl = 38    # poblacion inicial
 p_sel = 0.141     # prob seleccion del mejor fitness
 p_mut = 0.1700019    # probailidad de mutacion
-cont_gen = 1  # contador de generaciones
-pobl_all = [] # guardar todas las poblaciones?
+cont_gen = 1      # contador de generaciones
 
 # generar la poblacion inicial 
 poblacion_inicial = generarPoblacionInicial(n_pobl, n_votes, quorum_min) # generar la poblacion inicial
@@ -257,7 +256,7 @@ pobl_actual_ord = ordenarPoblacion(poblacion_inicial, puntos)
 mejor_cromosoma = pobl_actual_ord[0]
 
 # definir un numero fijo de generaciones 
-while cont_gen <= 100:
+while cont_gen <= 25000:
   cont_gen += 1
   
   #generar la nueva poblacion (cruzar, validar, mutar)
