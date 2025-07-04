@@ -3,8 +3,8 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import random as ra
-from scipy.spatial.distance import pdist
 from scipy.spatial import ConvexHull
+from scipy.spatial import distance_matrix
 
 # generador de numeros aleatorios
 rng = np.random.default_rng()
@@ -26,6 +26,13 @@ def getDatos(path):
   return np.array(points), n_votes  # convertir a array np
 
 
+def generarPoblacionInicial(n_pob, n_votes, quorum):
+  poblacion = np.empty((n_pob, n_votes), dtype=np.uint8) # crear vacio
+  for i in range(n_pob):
+    poblacion[i] = generarCromosoma(n_votes, quorum)
+  return poblacion
+
+
 def generarCromosoma(total, quorum):
   '''genera un cromosoma inicial que cumple con la coalicion minima ganadora'''
   # vector ceros
@@ -42,9 +49,10 @@ def graf_polig_convexo(cromosoma, pts, ax):
   '''crea el grafico interactivo para mostrar los puntos en cada generacion'''
   # filtrar puntos
   pts_select = pts[cromosoma == 1]
-  
+  pts_no_select = pts[cromosoma == 0]
+
   # graficar puntos
-  ax.scatter(pts[:, 0], pts[:, 1], color='blue', label='Puntos no seleccionados')
+  ax.scatter(pts_no_select[:, 0], pts_no_select[:, 1], color='blue', label='Puntos no seleccionados')
   ax.scatter(pts_select[:, 0], pts_select[:, 1], color='red', label='Puntos seleccionados')
   
   # calcular y graficar el poligono convexo
@@ -67,59 +75,29 @@ def graf_polig_convexo(cromosoma, pts, ax):
   plt.show()
 
 
-def generarPoblacionInicial(n_pob, n_votes, quorum):
-  poblacion = np.empty((n_pob, n_votes), dtype=np.uint8) # crear vacio
-  for i in range(n_pob):
-    poblacion[i] = generarCromosoma(n_votes, quorum)
-  return poblacion
+def calcularFitness(cromosoma, matriz_distancias):
+  # crear la matriz de distancias con los puntos seleccionados
+  submatriz = matriz_distancias[cromosoma == 1][:, cromosoma == 1] #donde hayan votos
+  # calcular suma de distancias unicas sin diagonal y sin duplicados
+  triang_superior = np.triu(submatriz, k=1) #triangular superior
+  dist_max = np.sum(triang_superior)
+  return dist_max
 
-
-#utiliza scipy pdist y normaliza el resultado de 0 a 1
-def calcularFitness(cromosoma, puntos):
-  """
-  fitness normalizado 0 a 1 para puntos en el plano
-  1 Minima distancia; 0 Maxima distancia posible.
-  """
-  pts_selec = puntos[cromosoma == 1]
-
-  p_max = len(pts_selec) #216 puntos
-    
-  #suma de distancia total
-  distancia_total = np.sum(pdist(pts_selec, 'euclidean'))
-    
-  #distancia maxima en el plano -1,-1 a 1,1
-  d_max = np.sqrt((1-(-1))**2+((1-(-1))**2)) #sqrt(8)
-  max_possible_dist = (p_max * (p_max - 1) / 2) * d_max
-
-  #fitness normalizado para minimizacion
-  fitness = 1 - (distancia_total / max_possible_dist)
-  
-  return fitness
-
-
-def distanciaTotal(cromosoma, puntos):
-  pts_selec = puntos[cromosoma == 1]
-  #suma de distancia total
-  distancia_total = np.sum(pdist(pts_selec, 'euclidean'))
-  return distancia_total
-
-
-# variables globales para guardar el mejor resultado anterior
-mejor_distancia_anterior = float('inf') 
 
 def ordenarPoblacion(poblacion, puntos):
   '''Se selecciona al mejor individuo de acuerdo a la probabilidad del fitness'''
 
   global mejor_distancia_anterior
+  global mejor_distancia_actual
 
   # evaluar cada cromosoma
-  fitness_values = np.array([calcularFitness(cromosoma, puntos) for cromosoma in poblacion])
-  mejor_distancia_actual = distanciaTotal(poblacion[0], puntos)
+  fitness_values = np.array([calcularFitness(cromosoma, matriz_distancias) for cromosoma in poblacion])
+  #mejor_distancia_actual = distanciaTotal(poblacion[0], puntos)
+  mejor_distancia_actual = calcularFitness(poblacion[0], matriz_distancias)
 
-  # ordenar de mayor a menor fitness
-  sorted_indices = np.argsort(fitness_values)[::-1]
+  # ordenar de menor a mayor fitness
+  sorted_indices = np.argsort(fitness_values)
   poblacion_ordenada = poblacion[sorted_indices]
-
   # verificar si hay mejora
   if mejor_distancia_actual < mejor_distancia_anterior:
     print(f'Generacion Actual:{cont_gen}')
@@ -131,23 +109,11 @@ def ordenarPoblacion(poblacion, puntos):
 def prob_posicion(poblacion, prob):
   '''calcular la probabilidad de elegir al individuo segun la posicion 
   en el indice retorna el arreglo de probabilidades acumuladas'''
-  sum = 0
-  probabilidades = []
-  probabilidad = 0
-
-  n_crom, n_votes = poblacion.shape
-
-  #calcula la sumatoria de todas las probabilidades
-  for j in range(1, n_crom+1):
-    sum += prob*(1-prob)**(j-1)
-
-  #calcula la probabilidad por posicion
-  for i in range(1, n_crom+1):
-    # calcular las probabilidades de seleccion de padres
-    probabilidad = prob*(1-prob)**(i-1)/sum
-    probabilidades.append(probabilidad) # guardar
-
-  return probabilidades
+  n_crom = poblacion.shape[0]
+  indices = np.arange(1, n_crom+1)
+  probabilidades = prob * (1-prob)**(indices-1)
+  
+  return probabilidades / np.sum(probabilidades)
 
 
 def crossover(padre1, padre2, p_corte):
@@ -176,6 +142,32 @@ def mutacion(crom_original, p_mut):
     crom_mutado[swap_one], crom_mutado[swap_zero] = crom_mutado[swap_zero], crom_mutado[swap_one]
   #devolver el array resultante
   return crom_mutado
+
+
+def validar(cromosoma, quorum_minimo):
+  '''
+  Validar que los datos cumplan con el quorum minimo.
+  Si es mayor al quorum convierte unos random hasta cumplir
+  Si es menor al quorum convierte ceros random hasta cumplir
+  '''
+  suma = np.sum(cromosoma)
+  if suma > quorum_minimo:
+    # posiciones de todos los 1s
+    posiciones = np.where(cromosoma == 1)[0]
+    k = suma - quorum_minimo
+  elif suma < quorum_minimo:
+    # posiciones de todos los 0s
+    posiciones = np.where(cromosoma == 0)[0]
+    k = quorum_minimo - suma
+  else:
+    return cromosoma
+  
+  # cambiar k bits aleatorios
+  if k > 0:
+    cambios = np.random.permutation(posiciones)[:k]
+    cromosoma[cambios] ^= 1
+
+  return cromosoma
 
 
 def generarPoblacion(pobl_actual, p_sel, quorum_min, p_mut):
@@ -215,39 +207,16 @@ def generarPoblacion(pobl_actual, p_sel, quorum_min, p_mut):
   return np.array(nueva_poblacion) #retornar la nueva poblacion
 
 
-def validar(cromosoma, quorum_minimo):
-  '''
-  Validar que los datos cumplan con el quorum minimo.
-  Si es mayor al quorum convierte unos random hasta cumplir
-  Si es menor al quorum convierte ceros random hasta cumplir
-  '''
-  suma = np.sum(cromosoma)
-  if suma > quorum_minimo:
-    # posiciones de todos los 1s
-    posiciones = np.where(cromosoma == 1)[0]
-    k = suma - quorum_minimo
-  elif suma < quorum_minimo:
-    # posiciones de todos los 0s
-    posiciones = np.where(cromosoma == 0)[0]
-    k = quorum_minimo - suma
-  else:
-    return cromosoma
-  
-  # cambiar k bits aleatorios
-  if k > 0:
-    cambios = np.random.permutation(posiciones)[:k]
-    cromosoma[cambios] ^= 1
-
-  return cromosoma
-
-
 #########---INICIO---#########
 puntos, n_votes = getDatos('./votes.json')    #posiciones y numero de votos
-quorum_min = math.floor(n_votes/2)+1      #quorum minimo
+quorum_min = math.floor(n_votes/2)+1      #quorum minimo 
 n_pobl = 37    # poblacion inicial
 p_sel = 0.141     # prob seleccion del mejor fitness
 p_mut = 0.1700019    # probailidad de mutacion
 cont_gen = 1      # contador de generaciones
+it_max = 25000
+matriz_distancias = distance_matrix(puntos, puntos) #matriz de distancias para O^n
+mejor_distancia_anterior = float('inf') # guardar mejor resultado anterior
 
 # generar la poblacion inicial 
 poblacion_inicial = generarPoblacionInicial(n_pobl, n_votes, quorum_min) # generar la poblacion inicial
@@ -257,7 +226,7 @@ pobl_actual_ord = ordenarPoblacion(poblacion_inicial, puntos)
 mejor_cromosoma = pobl_actual_ord[0]
 
 # definir un numero fijo de generaciones 
-while cont_gen <= 25000:
+while cont_gen <= it_max:
   cont_gen += 1
   
   #generar la nueva poblacion (cruzar, validar, mutar)
@@ -272,5 +241,8 @@ while cont_gen <= 25000:
   # Se reemplaza la poblacion anterior por la nueva
   pobl_actual_ord = pobl_new_ord
 
-fig, ax = plt.subplots(figsize=(12, 8))  # crear figura del plt
+
+#TODO: mostrar tabla de datos y grafico descendente (generacion, Z)
+
+fig, ax = plt.subplots(figsize=(10, 9))  # crear figura del plt
 graf_polig_convexo(mejor_cromosoma, puntos, ax)
